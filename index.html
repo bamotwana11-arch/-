@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ku">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kurd Game 🚦</title>
+
+<style>
+* {
+  box-sizing: border-box;
+  user-select: none;
+}
+
+body {
+  margin: 0;
+  background: #111;
+  color: white;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  overflow: hidden;
+}
+
+#top {
+  height: 70px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  background: #222;
+  font-size: 18px;
+}
+
+#game {
+  position: relative;
+  width: 100vw;
+  height: calc(100vh - 140px);
+  overflow: hidden;
+  background: #4d8b45;
+}
+
+/* ڕێگا */
+.road {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48%;
+  height: 100%;
+  background: #333;
+}
+
+.line {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 7px;
+  height: 55px;
+  background: white;
+  box-shadow: 0 100px white, 0 200px white,
+              0 300px white, 0 400px white,
+              0 500px white;
+}
+
+/* ئۆتۆمبێل */
+.car {
+  position: absolute;
+  width: 48px;
+  height: 82px;
+  border-radius: 10px;
+  transition: transform .1s;
+}
+
+.car::before,
+.car::after {
+  content: "";
+  position: absolute;
+  left: 7px;
+  right: 7px;
+  height: 15px;
+  background: #8fd3ff;
+  border-radius: 5px;
+}
+
+.car::before { top: 8px; }
+.car::after { bottom: 8px; }
+
+.red { background: #d62828; }
+.blue { background: #1976d2; }
+.yellow { background: #f5b400; }
+.green { background: #159447; }
+
+/* چرای ترافیک */
+#trafficLight {
+  position: absolute;
+  top: 20px;
+  left: 15px;
+  width: 55px;
+  padding: 8px;
+  background: #111;
+  border-radius: 12px;
+}
+
+.light {
+  width: 32px;
+  height: 32px;
+  margin: 5px auto;
+  border-radius: 50%;
+  opacity: .25;
+}
+
+.active {
+  opacity: 1;
+}
+
+.redLight { background: red; }
+.yellowLight { background: yellow; }
+.greenLight { background: lime; }
+
+/* کۆنتڕۆڵ */
+#controls {
+  height: 70px;
+  background: #222;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  align-items: center;
+}
+
+button {
+  border: none;
+  border-radius: 12px;
+  padding: 13px 20px;
+  font-size: 17px;
+  font-weight: bold;
+  color: white;
+  background: #444;
+}
+
+button:active {
+  transform: scale(.94);
+}
+
+#start {
+  background: #168a45;
+}
+
+#stop {
+  background: #b51f1f;
+}
+
+#message {
+  position: absolute;
+  top: 45%;
+  width: 100%;
+  font-size: 25px;
+  font-weight: bold;
+  pointer-events: none;
+}
+</style>
+</head>
+
+<body>
+
+<div id="top">
+  <div>🚦 کورد گەیم</div>
+  <div>⭐ خاڵ: <span id="score">0</span></div>
+  <div>🚗 ئۆتۆمبێل: <span id="cars">0</span></div>
+</div>
+
+<div id="game">
+
+  <div class="road"></div>
+  <div class="line"></div>
+
+  <div id="trafficLight">
+    <div id="r" class="light redLight active"></div>
+    <div id="y" class="light yellowLight"></div>
+    <div id="g" class="light greenLight"></div>
+  </div>
+
+  <div id="message">کرتە لە «دەستپێکردن» بکە 🚦</div>
+
+</div>
+
+<div id="controls">
+  <button id="start">▶️ دەستپێکردن</button>
+  <button id="stop">🛑 وەستاندن</button>
+  <button id="change">🔄 گۆڕینی چراغ</button>
+</div>
+
+<script>
+
+let running = false;
+let trafficGreen = false;
+let score = 0;
+let carCount = 0;
+let cars = [];
+
+const game = document.getElementById("game");
+const scoreText = document.getElementById("score");
+const carsText = document.getElementById("cars");
+const message = document.getElementById("message");
+
+const colors = ["red", "blue", "yellow", "green"];
+
+function changeLight() {
+
+  trafficGreen = !trafficGreen;
+
+  document.getElementById("r").classList.toggle(
+    "active", !trafficGreen
+  );
+
+  document.getElementById("g").classList.toggle(
+    "active", trafficGreen
+  );
+}
+
+function createCar() {
+
+  if (!running) return;
+
+  const car = document.createElement("div");
+
+  car.className =
+    "car " + colors[Math.floor(Math.random() * colors.length)];
+
+  const roadLeft = game.clientWidth / 2 -
+                   game.clientWidth * .24;
+
+  const lane = Math.random() > .5 ? 0 : 1;
+
+  car.style.left =
+    (roadLeft + 25 + lane * 65) + "px";
+
+  car.style.top = "-100px";
+
+  game.appendChild(car);
+
+  const obj = {
+    element: car,
+    y: -100,
+    speed: 2 + Math.random() * 2,
+    stopped: false
+  };
+
+  cars.push(obj);
+  carCount++;
+
+  carsText.textContent = carCount;
+}
+
+function moveCars() {
+
+  cars.forEach((car, index) => {
+
+    if (!running) return;
+
+    if (!trafficGreen && car.y > 130 && car.y < 220) {
+      car.stopped = true;
+    } else {
+      car.stopped = false;
+    }
+
+    if (!car.stopped) {
+      car.y += car.speed;
+    }
+
+    car.element.style.top = car.y + "px";
+
+    if (car.y > game.clientHeight) {
+
+      car.element.remove();
+      cars.splice(index, 1);
+
+      score += 10;
+      scoreText.textContent = score;
+      carCount--;
+      carsText.textContent = carCount;
+    }
+  });
+
+  requestAnimationFrame(moveCars);
+}
+
+document.getElementById("start").onclick = () => {
+
+  running = true;
+
+  message.textContent = "تۆ بەڕێوەبەری ترافیکیت 🚦";
+
+  if (cars.length === 0) {
+    requestAnimationFrame(moveCars);
+  }
+};
+
+document.getElementById("stop").onclick = () => {
+
+  running = false;
+
+  message.textContent = "ترافیک وەستێنرا 🛑";
+};
+
+document.getElementById("change").onclick = () => {
+
+  changeLight();
+
+  message.textContent =
+    trafficGreen
+      ? "چراغ سەوزە 🟢"
+      : "چراغ سوورە 🔴";
+};
+
+setInterval(createCar, 1400);
+
+</script>
+
+</body>
+</html>
